@@ -2,10 +2,11 @@ defmodule Allowance do
   @type remaining :: non_neg_integer
   @type tokens :: non_neg_integer
   @type buffer :: binary
+  @type len :: non_neg_integer
 
   @type allowance :: {remaining, buffer, tokens}
 
-  @spec new(initial_length :: non_neg_integer) :: allowance
+  @spec new(len) :: allowance
   def new(initial_length), do: {initial_length, <<>>, 0}
 
   @spec add_tokens(allowance, tokens) :: allowance
@@ -25,6 +26,9 @@ defmodule Allowance do
     new_state = {remaining, buffer, available_tokens - tokens}
     {tokens, new_state}
   end
+
+  @spec set_length(allowance, len) :: allowance
+  def set_length({0, buffer, tokens}, len), do: {len, buffer, tokens}
 
   @spec write_buffer(allowance, data :: binary) :: allowance
   def write_buffer({remaining, buffer, available_tokens}, data) when remaining - byte_size(data) >= 0 do

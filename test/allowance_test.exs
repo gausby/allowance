@@ -42,21 +42,47 @@ defmodule AllowanceTest do
       |> Allowance.write_buffer(data)
   end
 
-  test "integration test" do
-    data = "foobarbaz"
-    allowance =
-      byte_size(data)
-      |> Allowance.new()
-      |> Allowance.add_tokens(byte_size(data))
+  describe "integration tests" do
+    test "integration test" do
+      data = "foobarbaz"
+      allowance =
+        byte_size(data)
+        |> Allowance.new()
+        |> Allowance.add_tokens(byte_size(data))
 
-    # consume some ...
-    {tokens, allowance} = Allowance.take_tokens(allowance, 6)
-    {to_write, rest} = String.split_at(data, tokens)
-    {:ok, allowance} = Allowance.write_buffer(allowance, to_write)
-    # consume the rest
-    {tokens, allowance} = Allowance.take_tokens(allowance, 3)
-    {to_write, ""} = String.split_at(rest, tokens)
+      # consume some ...
+      {tokens, allowance} = Allowance.take_tokens(allowance, 6)
+      {to_write, rest} = String.split_at(data, tokens)
+      {:ok, allowance} = Allowance.write_buffer(allowance, to_write)
+      # consume the rest
+      {tokens, allowance} = Allowance.take_tokens(allowance, 3)
+      {to_write, ""} = String.split_at(rest, tokens)
 
-    assert {:ok, {0, ^data, 0}} = Allowance.write_buffer(allowance, to_write)
+      assert {:ok, {0, ^data, 0}} = Allowance.write_buffer(allowance, to_write)
+    end
+
+    test "setting length" do
+      data = "foobar"
+      allowance =
+        Allowance.new(3)
+        |> Allowance.add_tokens(6)
+
+      # consume some ...
+      assert {3, <<>>, 6} = allowance
+      {tokens, allowance} = Allowance.take_tokens(allowance, 3)
+      {to_write, rest} = String.split_at(data, tokens)
+      {:ok, allowance} = Allowance.write_buffer(allowance, to_write)
+      assert {0, "foo", 3} = allowance
+
+      # consume the rest
+      {tokens, allowance} =
+        allowance
+        |> Allowance.set_length(3)
+        |> Allowance.take_tokens(3)
+      assert {3, "foo", 0} = allowance
+      {to_write, ""} = String.split_at(rest, tokens)
+
+      assert {:ok, {0, ^data, 0}} = Allowance.write_buffer(allowance, to_write)
+    end
   end
 end
