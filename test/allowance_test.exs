@@ -2,35 +2,36 @@ defmodule AllowanceTest do
   use ExUnit.Case
   doctest Allowance
 
-  test "creating a allowance" do
-    assert {{<<>>, 200}, 0} = Allowance.new(200)
+  test "creating an allowance" do
+    assert {{<<>>, nil}, 0} = Allowance.new(nil, 0)
   end
 
   test "adding tokens" do
-    assert {{<<>>, 200}, 200} =
-      Allowance.new(200)
-      |> Allowance.add_tokens(200)
+    assert {{<<>>, nil}, 100} =
+      Allowance.new(nil, 0)
+      |> Allowance.add_tokens(100)
+
+    assert {{<<>>, nil}, 150} =
+      Allowance.new(nil, 50)
+      |> Allowance.add_tokens(100)
   end
 
   describe "taking tokens" do
     test "more than available tokens" do
       assert {100, {{<<>>, 200}, 0}} =
-        Allowance.new(200)
-        |> Allowance.add_tokens(100)
+        Allowance.new(200, 100)
         |> Allowance.take_tokens(200)
     end
 
     test "less than remaining" do
       assert {20, {{<<>>, 200}, 180}} =
-        Allowance.new(200)
-        |> Allowance.add_tokens(200)
+        Allowance.new(200, 200)
         |> Allowance.take_tokens(20)
     end
 
     test "more than remaining" do
       assert {20, {{<<>>, 20}, 0}} =
-        Allowance.new(20)
-        |> Allowance.add_tokens(20)
+        Allowance.new(20, 20)
         |> Allowance.take_tokens(100)
     end
   end
@@ -42,13 +43,24 @@ defmodule AllowanceTest do
       |> Allowance.write_buffer(data)
   end
 
+  test "get the buffer and reset the continuation" do
+    data = "hello"
+    assert {^data, {{<<>>, nil}, 0}} =
+      Allowance.new(byte_size(data))
+      |> Allowance.write_buffer!(data)
+      |> Allowance.get_buffer_and_reset
+  end
+
+  test "setting remaining" do
+    assert {{<<>>, 5}, 0} =
+      Allowance.new(nil)
+      |> Allowance.set_remaining(5)
+  end
+
   describe "integration tests" do
     test "integration test" do
       data = "foobarbaz"
-      allowance =
-        byte_size(data)
-        |> Allowance.new()
-        |> Allowance.add_tokens(byte_size(data))
+      allowance = Allowance.new(byte_size(data), byte_size(data))
 
       # consume some ...
       {tokens, allowance} = Allowance.take_tokens(allowance, 6)
@@ -61,28 +73,35 @@ defmodule AllowanceTest do
       assert {:ok, {{^data, 0}, 0}} = Allowance.write_buffer(allowance, to_write)
     end
 
-    test "setting length" do
-      data = "foobar"
+    test "consuming length message and a message" do
+      data = <<6, ?f, ?o, ?o, ?b, ?a, ?r>>
+      max_tokens = 200
+
+      # consume one byte (the length of the message)
+      allowance = Allowance.new(1, 1)
+      {tokens, allowance} = Allowance.take_tokens(allowance, max_tokens)
+
+      # read the given tokens from the binary and convert the binary
+      # value to an integer that we can use as a length for further
+      # consummation
+      <<consume::binary-size(tokens), rest::binary>> = data
+      <<len::big-integer-size(8)>> = consume
+      # write the data back to the buffer and get ready to consume the
+      # rest of the message
       allowance =
-        Allowance.new(3)
-        |> Allowance.add_tokens(6)
-
-      # consume some ...
-      assert {{<<>>, 3}, 6} = allowance
-      {tokens, allowance} = Allowance.take_tokens(allowance, 3)
-      {to_write, rest} = String.split_at(data, tokens)
-      {:ok, allowance} = Allowance.write_buffer(allowance, to_write)
-      assert {{"foo", 0}, 3} = allowance
-
-      # consume the rest
-      {tokens, allowance} =
         allowance
-        |> Allowance.set_length(3)
-        |> Allowance.take_tokens(3)
-      assert {{"foo", 3}, 0} = allowance
-      {to_write, ""} = String.split_at(rest, tokens)
+        |> Allowance.write_buffer!(consume)
+        |> Allowance.set_remaining(len)
+        |> Allowance.add_tokens(len)
 
-      assert {:ok, {{^data, 0}, 0}} = Allowance.write_buffer(allowance, to_write)
+      {tokens, allowance} = Allowance.take_tokens(allowance, max_tokens)
+
+      <<consume::binary-size(tokens), _::binary>> = rest
+
+      assert {^data, {{<<>>, nil}, 0}} =
+        allowance
+        |> Allowance.write_buffer!(consume)
+        |> Allowance.get_buffer_and_reset
     end
   end
 end

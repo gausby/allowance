@@ -1,14 +1,14 @@
 defmodule Allowance do
-  @type remaining :: non_neg_integer
   @type tokens :: non_neg_integer
   @type buffer :: binary
-  @type len :: non_neg_integer
+  @type remaining :: non_neg_integer | nil
 
   @type continuation :: {buffer, remaining}
   @type allowance :: {continuation, tokens}
 
-  @spec new(initial_length :: len) :: allowance
-  def new(initial_length), do: {{<<>>, initial_length}, 0}
+  @spec new(remaining, tokens) :: allowance
+  def new(expected_message_length, tokens \\ 0),
+    do: {{<<>>, expected_message_length}, tokens}
 
   @spec add_tokens(allowance, tokens) :: allowance
   def add_tokens({continuation, current_tokens}, tokens),
@@ -28,14 +28,27 @@ defmodule Allowance do
     {tokens, new_state}
   end
 
-  @spec set_length(allowance, len) :: allowance
-  def set_length({{buffer, _}, tokens}, len), do: {{buffer, len}, tokens}
+  @spec set_remaining(allowance, remaining) :: allowance
+  def set_remaining({{buffer, _}, tokens}, remaining),
+    do: {{buffer, remaining}, tokens}
 
-  @spec write_buffer(allowance, data :: binary) :: allowance
+  @spec get_buffer_and_reset(allowance) :: {buffer, allowance}
+  def get_buffer_and_reset({{buffer, 0}, tokens}),
+    do: {buffer, Allowance.new(nil, tokens)}
+
+  @spec write_buffer(allowance, data :: binary) ::
+    {:ok, allowance} |
+    {:error, :out_of_bounds}
   def write_buffer({{buffer, remaining}, available_tokens}, data) when remaining - byte_size(data) >= 0 do
     new_state = {{buffer <> data, remaining - byte_size(data)}, available_tokens}
     {:ok, new_state}
   end
   def write_buffer({_continuation, _available_tokens}, _data),
     do: {:error, :out_of_bounds}
+
+  @spec write_buffer!(allowance, data :: binary) :: allowance | no_return
+  def write_buffer!(allowance, data) do
+    {:ok, result} = write_buffer(allowance, data)
+    result
+  end
 end
