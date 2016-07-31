@@ -3,32 +3,32 @@ defmodule AllowanceTest do
   doctest Allowance
 
   test "creating a allowance" do
-    assert {200, <<>>, 0} = Allowance.new(200)
+    assert {{<<>>, 200}, 0} = Allowance.new(200)
   end
 
   test "adding tokens" do
-    assert {200, <<>>, 200} =
+    assert {{<<>>, 200}, 200} =
       Allowance.new(200)
       |> Allowance.add_tokens(200)
   end
 
   describe "taking tokens" do
     test "more than available tokens" do
-      assert {100, {200, <<>>, 0}} =
+      assert {100, {{<<>>, 200}, 0}} =
         Allowance.new(200)
         |> Allowance.add_tokens(100)
         |> Allowance.take_tokens(200)
     end
 
     test "less than remaining" do
-      assert {20, {200, <<>>, 180}} =
+      assert {20, {{<<>>, 200}, 180}} =
         Allowance.new(200)
         |> Allowance.add_tokens(200)
         |> Allowance.take_tokens(20)
     end
 
     test "more than remaining" do
-      assert {20, {20, <<>>, 0}} =
+      assert {20, {{<<>>, 20}, 0}} =
         Allowance.new(20)
         |> Allowance.add_tokens(20)
         |> Allowance.take_tokens(100)
@@ -37,7 +37,7 @@ defmodule AllowanceTest do
 
   test "writing data to a buffer" do
     data = "foobar"
-    assert {:ok, {94, ^data, 0}} =
+    assert {:ok, {{^data, 94}, 0}} =
       Allowance.new(100)
       |> Allowance.write_buffer(data)
   end
@@ -58,7 +58,7 @@ defmodule AllowanceTest do
       {tokens, allowance} = Allowance.take_tokens(allowance, 3)
       {to_write, ""} = String.split_at(rest, tokens)
 
-      assert {:ok, {0, ^data, 0}} = Allowance.write_buffer(allowance, to_write)
+      assert {:ok, {{^data, 0}, 0}} = Allowance.write_buffer(allowance, to_write)
     end
 
     test "setting length" do
@@ -68,21 +68,21 @@ defmodule AllowanceTest do
         |> Allowance.add_tokens(6)
 
       # consume some ...
-      assert {3, <<>>, 6} = allowance
+      assert {{<<>>, 3}, 6} = allowance
       {tokens, allowance} = Allowance.take_tokens(allowance, 3)
       {to_write, rest} = String.split_at(data, tokens)
       {:ok, allowance} = Allowance.write_buffer(allowance, to_write)
-      assert {0, "foo", 3} = allowance
+      assert {{"foo", 0}, 3} = allowance
 
       # consume the rest
       {tokens, allowance} =
         allowance
         |> Allowance.set_length(3)
         |> Allowance.take_tokens(3)
-      assert {3, "foo", 0} = allowance
+      assert {{"foo", 3}, 0} = allowance
       {to_write, ""} = String.split_at(rest, tokens)
 
-      assert {:ok, {0, ^data, 0}} = Allowance.write_buffer(allowance, to_write)
+      assert {:ok, {{^data, 0}, 0}} = Allowance.write_buffer(allowance, to_write)
     end
   end
 end
