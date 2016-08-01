@@ -16,6 +16,16 @@ defmodule AllowanceTest do
       |> Allowance.add_tokens(100)
   end
 
+  test "setting tokens" do
+    assert {{<<>>, nil}, 100} =
+      Allowance.new(nil, 25)
+      |> Allowance.set_tokens(100)
+
+    assert {{<<>>, nil}, 0} =
+      Allowance.new(nil, 50)
+      |> Allowance.set_tokens(0)
+  end
+
   describe "taking tokens" do
     test "more than available tokens" do
       assert {100, {{<<>>, 200}, 0}} =

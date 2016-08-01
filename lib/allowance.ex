@@ -14,6 +14,10 @@ defmodule Allowance do
   def add_tokens({continuation, current_tokens}, tokens),
     do: {continuation, current_tokens + tokens}
 
+  @spec set_tokens(allowance, tokens) :: allowance
+  def set_tokens({continuation, _}, tokens),
+    do: {continuation, tokens}
+
   @spec take_tokens(allowance, tokens) :: {allowance, tokens}
   def take_tokens({continuation, available_tokens}, tokens) when available_tokens < tokens do
     new_state = {continuation, 0}
