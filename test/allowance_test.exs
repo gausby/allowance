@@ -28,21 +28,25 @@ defmodule AllowanceTest do
 
   describe "taking tokens" do
     test "more than available tokens" do
-      assert {100, {{<<>>, 200}, 0}} =
+      assert {100, {_, 0}} =
         Allowance.new(200, 100)
         |> Allowance.take_tokens(200)
     end
 
     test "less than remaining" do
-      assert {20, {{<<>>, 200}, 180}} =
+      assert {20, {_, 180}} =
         Allowance.new(200, 200)
         |> Allowance.take_tokens(20)
     end
 
     test "more than remaining" do
-      assert {20, {{<<>>, 20}, 0}} =
+      assert {20, {_, 0}} =
         Allowance.new(20, 20)
         |> Allowance.take_tokens(100)
+
+      assert {4, {_, 10}} =
+        Allowance.new(4, 14)
+        |> Allowance.take_tokens(200)
     end
   end
 

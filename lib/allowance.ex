@@ -19,6 +19,11 @@ defmodule Allowance do
     do: {continuation, tokens}
 
   @spec take_tokens(allowance, tokens) :: {allowance, tokens}
+  def take_tokens({{_, remaining} = continuation, available_tokens}, tokens)
+  when remaining < tokens and remaining < available_tokens do
+    new_state = {continuation, available_tokens - remaining}
+    {remaining, new_state}
+  end
   def take_tokens({continuation, available_tokens}, tokens) when available_tokens < tokens do
     new_state = {continuation, 0}
     {available_tokens, new_state}
