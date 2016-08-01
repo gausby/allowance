@@ -58,7 +58,7 @@ defmodule AllowanceTest do
     assert {^data, {{<<>>, nil}, 0}} =
       Allowance.new(byte_size(data))
       |> Allowance.write_buffer!(data)
-      |> Allowance.get_buffer_and_reset
+      |> Allowance.get_and_reset_buffer
   end
 
   test "setting remaining" do
@@ -108,10 +108,10 @@ defmodule AllowanceTest do
 
       <<consume::binary-size(tokens), _::binary>> = rest
 
-      assert {^data, {{<<>>, nil}, 0}} =
+      assert {^data, _} =
         allowance
         |> Allowance.write_buffer!(consume)
-        |> Allowance.get_buffer_and_reset
+        |> Allowance.get_and_reset_buffer
     end
   end
 end

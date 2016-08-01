@@ -36,8 +36,8 @@ defmodule Allowance do
   def set_remaining({{buffer, _}, tokens}, remaining),
     do: {{buffer, remaining}, tokens}
 
-  @spec get_buffer_and_reset(allowance) :: {buffer, allowance}
-  def get_buffer_and_reset({{buffer, 0}, tokens}),
+  @spec get_and_reset_buffer(allowance) :: {buffer, allowance}
+  def get_and_reset_buffer({{buffer, 0}, tokens}),
     do: {buffer, Allowance.new(nil, tokens)}
 
   @spec write_buffer(allowance, data :: binary) ::
